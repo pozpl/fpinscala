@@ -1,5 +1,7 @@
 package fpinscala.gettingstarted
 
+import scala.annotation.tailrec
+
 // A comment!
 /* Another comment */
 /** A documentation comment */
@@ -150,7 +152,17 @@ object PolymorphicFunctions {
 
   // Exercise 2: Implement a polymorphic function to check whether
   // an `Array[A]` is sorted
-  def isSorted[A](as: Array[A], gt: (A,A) => Boolean): Boolean = ???
+  def isSorted[A](as: Array[A], gt: (A, A) => Boolean): Boolean = {
+    @tailrec
+    def loop(idx: Int, ar: Array[A], gt: (A, A) => Boolean): Boolean = {
+      if (idx >= ar.length - 1) true
+      else if (gt(ar(idx), ar(idx + 1) ) )   false
+      else loop(idx + 1, ar, gt)
+    }
+
+    loop(0, as, gt)
+
+  }
 
   // Polymorphic functions are often so constrained by their type
   // that they only have one implementation! Here's an example:
@@ -185,4 +197,9 @@ object PolymorphicFunctions {
 
   def compose[A,B,C](f: B => C, g: A => B): A => C =
     ???
+
+
+  def main(args: Array[String]): Unit = {
+    println("is sorted " + isSorted(Array(1,2,3,4), (a:Int,b:Int)=> b > a))
+  }
 }
