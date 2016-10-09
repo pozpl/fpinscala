@@ -24,3 +24,6 @@ Tree.size(ta)
 Tree.max(ta)
 Tree.depth(ta)
 
+Tree.sizeF(ta)
+Tree.maxF(ta)
+Tree.depthF(ta)
