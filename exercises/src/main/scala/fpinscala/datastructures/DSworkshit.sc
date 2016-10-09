@@ -17,3 +17,10 @@ List.flatMap(a)((x)=>List(x))
 List.filterViaFlatMap(a, (a:Int) => a % 2 == 1)
 
 List.zipWith(a,b, (a:Int, b:Int)=>(a+b))
+
+val ta = Branch(Branch(Leaf(1), Leaf(2)), Leaf(3))
+
+Tree.size(ta)
+Tree.max(ta)
+Tree.depth(ta)
+
