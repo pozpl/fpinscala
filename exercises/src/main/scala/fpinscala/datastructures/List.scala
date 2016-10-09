@@ -159,4 +159,16 @@ object List {
         reverse(go(l1, l2, List[B]()))
     }
 
+    def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = {
+        if(length(sup) >= length(sub)){
+            if(sum(zipWith(sup, sub, (a:A,b:A) => if(a==b) 1 else 0)) == length(sub)) {
+                true
+            }else{
+                hasSubsequence(tail(sup), sub)
+            }
+        }else{
+            false
+        }
+    }
+
 }
