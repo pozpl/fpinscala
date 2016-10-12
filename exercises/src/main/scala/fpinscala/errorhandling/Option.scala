@@ -94,5 +94,17 @@ object Option {
         go(a, Some(Nil))
     }
 
-    def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = sys.error("todo4")
+    def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = {
+
+        def go(tail: List[A], acc: Option[List[B]]): Option[List[B]] = tail match {
+            case h :: t => f(h).flatMap( hv => go(t, acc.map( accv => hv::accv )))
+            case Nil => acc.map( x => x.reverse )
+        }
+
+        go(a, Some(Nil))
+    }
+
+    def sequenceViaTraverse[A](a: List[Option[A]]): Option[List[A]] = {
+        traverse(a)((a:Option[A]) => a)
+    }
 }
