@@ -21,3 +21,6 @@ left.map((_+1))
 
 right.flatMap(a=>Right(a+1))
 left.flatMap(a=>Right(a+1))
+
+val eitherList = Right(1)::Right(22)::Right(34)::Nil
+Either.traverse(1::22::33::Nil)((a)=>Right(a))
