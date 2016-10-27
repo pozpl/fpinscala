@@ -9,6 +9,13 @@ stream.takeWhileViaFold(x => x < 6 ).toList()
 stream.map((x) => x*2).toList()
 stream.filter((x) => x%2 > 0).toList()
 stream.filter2((x) => x%2 > 0).toList()
+stream.append(Stream(4,4,4)).toList()
+stream.append2(Stream(4,4,4)).toList()
+stream.flatMap((x)=>Stream(x)).toList()
+Stream.constant(2).take(5).toList()
+Stream.from(2).take(5).toList()
+
+
 
 
 
