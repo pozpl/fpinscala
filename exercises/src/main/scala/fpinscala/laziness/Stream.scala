@@ -137,4 +137,5 @@ object Stream {
     def constUnfold(const: Int):Stream[Int] = unfold(const)((s) => Some(s, s))
 
     def fibsUnfold():Stream[Int] = unfold((0,1))((p:(Int, Int)) => Some(p._1, (p._2, p._1+p._2) ))
+    def fromUnfold(x:Int):Stream[Int] = unfold(x)((a:Int) => Some(a, a+1 ))
 }
