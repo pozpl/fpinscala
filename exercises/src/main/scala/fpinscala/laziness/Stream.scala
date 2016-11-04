@@ -122,7 +122,28 @@ trait Stream[+A] {
         })
     }
 
-    def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
+    def startsWith[B](s: Stream[B]): Boolean = {
+        unfold((this, s))((pair) => pair match {
+            case (Cons(h1, t1), Cons(h2, t2)) => Some(h1() == h2(), (t1(), t2()))
+            case (Empty, Cons(h2, t2)) => Some(false, (empty, t2()))
+            case _ => None
+        }).forAll((x:Boolean)=> x)
+    }
+
+    def tails():Stream[Stream[A]] = {
+        unfold(this)((s) => s match {
+            case Empty => None
+            case s => Some(s, s.drop(1))
+        }).append(Stream())
+    }
+
+    def scanRight[B](z:B)(f: (A,=> B) => B):Stream[B] = {
+        this.foldRight((z, Stream(z)))((a,acc) => {
+            lazy val accl = acc
+            val b2 = f(a, accl._1)
+            (b2, cons(b2, accl._2))
+        })._2
+    }
 }
 
 case object Empty extends Stream[Nothing]

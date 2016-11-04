@@ -30,6 +30,10 @@ stream.zipWithViaUnfold(secondStream, (a:Int,b:Int) => a+b ).toList()
 
 stream.zipAll(secondStream).toList()
 
+stream.startsWith(Stream(1,3))
+stream.startsWith(Stream(2,3))
+secondStream.tails().toList()
+
 
 
 
