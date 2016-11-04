@@ -20,6 +20,19 @@ Stream.unfold(stream)((s:Stream[Int]) => s match {
 }).toList()
 Stream.constUnfold(2).take(5).toList()
 Stream.fibsUnfold().take(5).toList()
+stream.mapViaUnfold((_*3)).toList()
+stream.takeViaUnfold(2).toList()
+stream.takeWhileViaUnfold(x => x < 6 ).toList()
+
+val secondStream:Stream[Int] = Stream(3,3,3)
+
+stream.zipWithViaUnfold(secondStream, (a:Int,b:Int) => a+b ).toList()
+
+stream.zipAll(secondStream).toList()
+
+
+
+
 
 
 
