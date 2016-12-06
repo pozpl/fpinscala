@@ -61,6 +61,17 @@ object Par {
             if (run(es)(cond).get) t(es) // Notice we are blocking on the result of `cond`.
             else f(es)
 
+    def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = {
+        es => {
+            val index = run(es)(n).get
+            choices(index)(es)
+        }
+    }
+
+    def choiceViaChoiceN[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] = {
+        choiceN(map(cond)(if(_) 0 else 1))(List(t,f))
+    }
+
     def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
     def asyncF[A, B](f: A => B): A => Par[B] = {
