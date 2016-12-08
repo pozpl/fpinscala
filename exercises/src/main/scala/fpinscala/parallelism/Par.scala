@@ -72,6 +72,31 @@ object Par {
         choiceN(map(cond)(if(_) 0 else 1))(List(t,f))
     }
 
+    def flatMap[A,B](pa:Par[A])(f: A => Par[B]):Par[B] = {
+        es => {
+            val a = pa(es).get
+            f(a)(es)
+        }
+    }
+
+    def chooser[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] = {
+        flatMap(pa)(choices)
+    }
+
+    def choiceNFM[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = {
+        flatMap(n)(choices(_))
+    }
+
+    def join[A](ppa: Par[Par[A]]): Par[A] = {
+        es => {
+            ppa(es).get()(es)
+        }
+    }
+
+    def flatMapViaJoin[A,B](pa:Par[A])(f: A => Par[B]):Par[B] = {
+        join(map(pa)(f))
+    }
+
     def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
     def asyncF[A, B](f: A => B): A => Par[B] = {
