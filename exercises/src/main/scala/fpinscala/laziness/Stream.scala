@@ -122,6 +122,11 @@ trait Stream[+A] {
         })
     }
 
+
+    // special case of `zipWith`
+    def zip[B](s2: Stream[B]): Stream[(A,B)] =
+        zipWithViaUnfold(s2, (_,_))
+
     def startsWith[B](s: Stream[B]): Boolean = {
         unfold((this, s))((pair) => pair match {
             case (Cons(h1, t1), Cons(h2, t2)) => Some(h1() == h2(), (t1(), t2()))
