@@ -12,25 +12,26 @@ shell, which you can fill in and modify while working through the chapter.
 */
 
 
-case class Prop(run: (TestCases,RNG) => Result) {
+case class Prop(run: (MaxSize, TestCases,RNG) => Result) {
 //  def check: Either[(FailedCase, SuccessCount), SuccessCount] = ???
   def &&(p:Prop):Prop = {
-    Prop((n:TestCases, r:RNG) => {
-        this.run(n, r) match {
-          case Passed => p.run(n,r)
+    Prop((m:MaxSize, n:TestCases, r:RNG) => {
+        this.run(m, n, r) match {
+          case Passed => p.run(m, n,r)
           case Falsified(failure, successes) => Falsified(failure, successes)
         }
     })
   }
 
   def ||(p:Prop):Prop = Prop {
-    (n: TestCases, r: RNG) => {
-      run(n, r) match {
+    (m:MaxSize, n: TestCases, r: RNG) => {
+      run(m, n, r) match {
         case Passed => Passed
-        case Falsified(_, _) => p.run(n, r)
+        case Falsified(_, _) => p.run(m, n, r)
       }
     }
   }
+
 }
 
 object Prop {
@@ -59,14 +60,41 @@ object Prop {
         s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
 
 
+
+  def forAll[A](g: SGen[A])(f: A => Boolean): Prop =
+    forAll(g(_))(f)
+
+
   def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
-    (n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+    (m,n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
       case (a, i) => try {
         if (f(a)) Passed else Falsified(a.toString, i)
       } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
     }.find(_.isFalsified).getOrElse(Passed)
   }
 
+  def forAll[A](g: Int => Gen[A])(f: A => Boolean): Prop = Prop {
+    (max,n,rng) =>
+      val casesPerSize = (n + (max - 1)) / max
+      val props: Stream[Prop] =
+        Stream.from(0).take((n min max) + 1).map(i => forAll(g(i))(f))
+      val prop: Prop =
+        props.map(p => Prop { (max, _, rng) =>
+          p.run(max, casesPerSize, rng)
+        }).toList.reduce(_ && _)
+      prop.run(max,n,rng)
+  }
+
+  def run(p: Prop,
+          maxSize: Int = 100,
+          testCases: Int = 100,
+          rng: RNG = RNG.Simple(System.currentTimeMillis)): Unit =
+    p.run(maxSize, testCases, rng) match {
+      case Falsified(msg, n) =>
+        println(s"! Falsified after $n passed tests:\n $msg")
+      case Passed =>
+        println(s"+ OK, passed $testCases tests.")
+    }
 
 
 }
@@ -107,11 +135,23 @@ object Gen {
 
   }
 
+  def listOf1[A](g: Gen[A]):SGen[List[A]] = {
+    SGen(n => listOfN(1 max n, g))
+  }
 
+  def listOf[A](g: Gen[A]): SGen[List[A]] = {
+    SGen((n) => Gen.listOfN(n, g))
+  }
+
+  val smallInt = Gen.choose(-10,10)
+  val maxProp = forAll(listOf(smallInt)) { l =>
+    val max = l.max
+    !l.exists(_ > max) // No value greater than `max` should exist in `l`
+  }
 
 }
 
-case class Gen[A](sample: State[RNG,A]){
+case class Gen[+A](sample: State[RNG,A]){
   def map[B](f: A => B): Gen[B] = {
     Gen(sample.map(f))
   }
@@ -136,6 +176,9 @@ case class Gen[A](sample: State[RNG,A]){
 //  def flatMap[A,B](f: A => Gen[B]): Gen[B] = ???
 //}
 case class SGen[+A](forSize: Int => Gen[A]){
+
+  def apply(n: Int): Gen[A] = forSize(n)
+
   def map[B](f: A => B): SGen[B] = SGen {
     (n:Int) => {
       forSize(n).map(f)
@@ -146,8 +189,6 @@ case class SGen[+A](forSize: Int => Gen[A]){
       forSize(n).flatMap(f)
     }
   }
-
-  def listOf[A](g: Gen[A]): SGen[List[A]] = ???
 
 
 }
