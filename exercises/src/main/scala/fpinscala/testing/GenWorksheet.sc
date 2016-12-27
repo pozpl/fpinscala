@@ -1,6 +1,7 @@
 import fpinscala.state._
 import fpinscala.testing._
 import Prop._
+import fpinscala.parallelism.Par
 
 val rngs = RNG.Simple(23)
 Gen.boolean.sample.run(rngs)
@@ -22,6 +23,10 @@ val sortProp = Prop.forAll(Gen.listOf1(smallInt)){
 }
 
 Prop.run(sortProp)
+
+val pint = Gen.choose(0,10) map (Par.unit(_))
+val p4 =
+    forAllPar(pint)(n => equal(Par.map(n)(y => y), n))
 
 
 

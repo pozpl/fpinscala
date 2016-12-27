@@ -1,9 +1,13 @@
 package fpinscala.testing
 
+import java.util.concurrent.{ExecutorService, Executors}
+
 import fpinscala.laziness.Stream
 import fpinscala.state._
 import Gen._
 import Prop._
+import fpinscala.parallelism.Par
+import fpinscala.parallelism.Par.Par
 
 
 /*
@@ -17,7 +21,7 @@ case class Prop(run: (MaxSize, TestCases,RNG) => Result) {
   def &&(p:Prop):Prop = {
     Prop((m:MaxSize, n:TestCases, r:RNG) => {
         this.run(m, n, r) match {
-          case Passed => p.run(m, n,r)
+          case Passed | Proved => p.run(m, n,r)
           case Falsified(failure, successes) => Falsified(failure, successes)
         }
     })
@@ -27,10 +31,12 @@ case class Prop(run: (MaxSize, TestCases,RNG) => Result) {
     (m:MaxSize, n: TestCases, r: RNG) => {
       run(m, n, r) match {
         case Passed => Passed
+        case Proved => Proved
         case Falsified(_, _) => p.run(m, n, r)
       }
     }
   }
+
 
 }
 
@@ -50,6 +56,10 @@ object Prop {
   case class Falsified(failure: FailedCase,
                        successes: SuccessCount) extends Result {
     def isFalsified = true
+  }
+
+  case object Proved extends Result {
+    def isFalsified = false
   }
 
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
@@ -94,7 +104,44 @@ object Prop {
         println(s"! Falsified after $n passed tests:\n $msg")
       case Passed =>
         println(s"+ OK, passed $testCases tests.")
+      case Proved =>
+        println(s"+ OK, proved property.")
     }
+
+  def check(p: => Boolean): Prop = Prop { (_, _, _) =>
+    if (p) Proved else Falsified("()", 0)
+  }
+
+  val ES: ExecutorService = Executors.newCachedThreadPool
+  val p1 = Prop.forAll(Gen.unit(Par.unit(1)))(i =>
+    Par.map(i)(_ + 1)(ES).get == Par.unit(2)(ES).get)
+
+  val p2 = Prop.check {
+    val p = Par.map(Par.unit(1))(_ + 1)
+    val p2 = Par.unit(2)
+    p(ES).get == p2(ES).get
+  }
+
+  val p3 = check {
+    equal(
+      Par.map(Par.unit(1))(_ + 1),
+      Par.unit(2)
+    )(ES).get
+  }
+
+  def equal[A](p: Par[A], p2: Par[A]): Par[Boolean] =
+    Par.map2(p,p2)(_ == _)
+
+  val S = weighted(
+    choose(1,4).map(Executors.newFixedThreadPool) -> .75,
+    unit(Executors.newCachedThreadPool) -> .25)
+
+  def forAllPar[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
+    forAll(S.map2(g)((_,_))) { case (s,a) => f(a)(s).get }
+
+  def forAllPar2[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
+    forAll(S ** g) { case s ** a => f(a)(s).get }
+
 
 
 }
@@ -155,6 +202,11 @@ case class Gen[+A](sample: State[RNG,A]){
   def map[B](f: A => B): Gen[B] = {
     Gen(sample.map(f))
   }
+
+  def map2[B,C](g: Gen[B])(f: (A,B) => C): Gen[C] =
+    Gen(sample.map2(g.sample)(f))
+
+
   def flatMap[B](f: A => Gen[B]): Gen[B] = {
      Gen(sample.flatMap( a => f(a).sample))
   }
@@ -168,6 +220,9 @@ case class Gen[+A](sample: State[RNG,A]){
       n:Int => this
     }
   }
+
+  def **[B](g: Gen[B]): Gen[(A,B)] =
+    (this map2 g)((_,_))
 
 }
 
@@ -191,6 +246,10 @@ case class SGen[+A](forSize: Int => Gen[A]){
   }
 
 
+}
+
+object ** {
+  def unapply[A,B](p: (A,B)) = Some(p)
 }
 
 //trait SGen[+A] {
